@@ -1,0 +1,9 @@
+#+TITLE: Runbuddy XMPP
+#+AUTHOR: Ryan Jeffrey
+#+EMAIL: jeffrrya@oregonstate.edu
+
+
+* What
+An XMPP pubsub system for the Runbuddy project. Allows different app instances
+to communicate with each other and for data persistance.
+
