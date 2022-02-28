@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:neat_periodic_task/neat_periodic_task.dart';
+import 'package:intl/intl.dart';
 
 void main() => runApp(const MyApp());
 
@@ -30,8 +32,20 @@ class MyHomePage extends StatefulWidget {
   State<MyHomePage> createState() => _MyHomePageState();
 }
 
+void printInfo(String text) {
+  print('\x1B[33m$text\x1B[0m');
+}
+
+String getDebugDateFormat(final DateTime dt) {
+  return DateFormat('hh:mm:ss a').format(dt);
+}
+
 class _MyHomePageState extends State<MyHomePage> {
   static const platform = MethodChannel('runbuddy/xmpp');
+  NeatPeriodicTaskScheduler? pubTimer;
+  DateTime timeOfLastRecv = DateTime.now();
+  // Time interval to publish. Two minutes by default.
+  int timeIntervalMs = 1000 * 60 * 2;
   String message = "No message yet.....";
 
   @override
@@ -42,7 +56,38 @@ class _MyHomePageState extends State<MyHomePage> {
       });
     });
 
+    pubTimer = createPubSubTimer();
     super.initState();
+  }
+
+  NeatPeriodicTaskScheduler createPubSubTimer() {
+    // Stop the timer and null it so the garbage collector destroys it.
+    if(pubTimer != null) {
+      pubTimer!.stop();
+      pubTimer = null;
+    }
+
+    NeatPeriodicTaskScheduler newTimer = NeatPeriodicTaskScheduler(
+        task: () async {
+          printInfo("Pubbing...");
+
+          setState(() {
+            getMessageFromXMPP().then((String message) {
+              this.message = message;
+            });
+            timeOfLastRecv = DateTime.now();
+          });
+
+          printInfo("Done pubbing.");
+        },
+      timeout: Duration(milliseconds: timeIntervalMs * 2),
+      name: 'pubsubber',
+      minCycle: Duration(milliseconds: timeIntervalMs ~/ 2 - 1),
+      interval: Duration(milliseconds: timeIntervalMs),
+    );
+
+    newTimer.start();
+    return newTimer;
   }
 
   Future<String> getMessageFromXMPP() async {
@@ -66,6 +111,9 @@ class _MyHomePageState extends State<MyHomePage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
+            Text(
+              "Time of last recv is ${getDebugDateFormat(timeOfLastRecv)}",
+            ),
             Text(
               message,
             ),
