@@ -50,17 +50,19 @@ public class MainActivity extends FlutterActivity {
         super.onCreate(savedInstanceState);
         GeneratedPluginRegistrant.registerWith(new FlutterEngine(this));
 
-
-
         Log.i("myapp", "Setting up XMPP");
-        new AsyncCaller(this).execute();
 
-        Log.i("myapp", "Done setting up XMPP");
+        // Init XMPP connection.
+        new AsyncInitXMPP(this).execute();
+
+        MainActivity ma = this;
         new MethodChannel(getFlutterEngine().getDartExecutor().getBinaryMessenger(), CHANNEL)
             .setMethodCallHandler(new MethodChannel.MethodCallHandler() {
                 @Override
                 public void onMethodCall(MethodCall methodCall, MethodChannel.Result result) {
                     if(methodCall.method.equals("getMessage")) {
+
+                        new AsyncPubSubXMPP(ma).execute();
 
                         result.success("Sneed!");
                     }
@@ -68,10 +70,11 @@ public class MainActivity extends FlutterActivity {
             });
     }
 
-    private class AsyncCaller extends AsyncTask<Void, Void, Void>
+    // Initialize the publish and subscribe connection. MUST be done asynchronously.
+    private class AsyncInitXMPP extends AsyncTask<Void, Void, Void>
     {
         private MainActivity mainActivity = null;
-        public AsyncCaller(MainActivity ma) {
+        public AsyncInitXMPP(MainActivity ma) {
             super();
             mainActivity = ma;
         }
@@ -81,7 +84,6 @@ public class MainActivity extends FlutterActivity {
             super.onPreExecute();
             // TODO process dialog maybe
         }
-
 
         @Override
         protected Void doInBackground(Void... voids) {
@@ -126,7 +128,7 @@ public class MainActivity extends FlutterActivity {
                     Log.i("myapp", items.toString());
                 }
 
-            mainActivity.hasConnection = true;
+                mainActivity.hasConnection = true;
             } catch (XmppStringprepException e) {
                 Log.e("myapp", "XMPPStringprep: " + Log.getStackTraceString(e));
             } catch (SmackException e) {
@@ -145,6 +147,31 @@ public class MainActivity extends FlutterActivity {
                 Log.i("myapp", "We have established a connection successfully!");
             } else {
                 Log.e("myapp", "We have failed to establish a connection.");
+            }
+            return null;
+        }
+    }
+
+    // Do periodic publish and subscribe to/from the server.
+    private class AsyncPubSubXMPP extends AsyncTask<Void, Void, Void>
+    {
+        private MainActivity mainActivity = null;
+        public AsyncPubSubXMPP(MainActivity ma) {
+            super();
+            mainActivity = ma;
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            // TODO process dialog maybe
+        }
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            // Do nothing if no connection.
+            if(!mainActivity.hasConnection) {
+                return null;
             }
             return null;
         }
