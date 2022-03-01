@@ -46,7 +46,7 @@ public class MainActivity extends FlutterActivity {
         Log.i("myapp", "Setting up XMPP");
 
         // Init XMPP connection.
-        new AsyncInitXMPP(this).execute();
+        //new AsyncInitXMPP(this).execute();
 
         MainActivity ma = this;
         new MethodChannel(getFlutterEngine().getDartExecutor().getBinaryMessenger(), CHANNEL)
@@ -54,7 +54,8 @@ public class MainActivity extends FlutterActivity {
                 @Override
                 public void onMethodCall(MethodCall methodCall, MethodChannel.Result result) {
                     if(methodCall.method.equals("getMessage")) {
-                        new AsyncPubSubXMPP(ma).execute();
+                        //new AsyncPubSubXMPP(ma).execute();
+                        Log.i("myapp", "SNEEDSNEED");
                         result.success(new HashMap<String, Object>() {{
                             put("sneed", "feed");
                         }});

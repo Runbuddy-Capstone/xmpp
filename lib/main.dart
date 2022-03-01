@@ -46,11 +46,11 @@ class _MyHomePageState extends State<MyHomePage> {
   DateTime timeOfLastRecv = DateTime.now();
   // Time interval to publish. Two minutes by default.
   int timeIntervalMs = 1000 * 60 * 2;
-  Map<String, dynamic> xmppItems = {};
+  Map<dynamic, dynamic> xmppItems = {};
 
   @override
   void initState() {
-    getMessageFromXMPP().then((Map<String, dynamic> message) {
+    getMessageFromXMPP().then((Map<dynamic, dynamic> message) {
       setState(() {
         xmppItems = message;
       });
@@ -71,7 +71,7 @@ class _MyHomePageState extends State<MyHomePage> {
         task: () async {
           printInfo("Pubbing...");
           setState(() {
-            getMessageFromXMPP().then((Map<String, dynamic> message) {
+            getMessageFromXMPP().then((Map<dynamic, dynamic> message) {
               xmppItems = message;
             });
             timeOfLastRecv = DateTime.now();
@@ -89,8 +89,8 @@ class _MyHomePageState extends State<MyHomePage> {
     return newTimer;
   }
 
-  Future<Map<String, dynamic>> getMessageFromXMPP() async {
-    Map<String, dynamic> value = {};
+  Future<Map<dynamic, dynamic>> getMessageFromXMPP() async {
+    Map<dynamic, dynamic> value = {};
 
     try {
       value = await platform.invokeMethod('getMessage');
@@ -107,10 +107,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
     // Add each map item.
     for(var e in xmppItems.entries) {
-      result.add(Text("${e.key}, ${e.value}"));
+      result.add(Text("${e.key}: ${e.value}"));
     }
 
-    return result;
+    result.add(const Text('----------Below are the objects-------------'));
+
+
+    return List.from(result.reversed);
   }
 
   @override
