@@ -46,13 +46,13 @@ class _MyHomePageState extends State<MyHomePage> {
   DateTime timeOfLastRecv = DateTime.now();
   // Time interval to publish. Two minutes by default.
   int timeIntervalMs = 1000 * 60 * 2;
-  String message = "No message yet.....";
+  Map<String, dynamic> xmppItems = {};
 
   @override
   void initState() {
-    getMessageFromXMPP().then((String message) {
+    getMessageFromXMPP().then((Map<String, dynamic> message) {
       setState(() {
-        this.message = message;
+        xmppItems = message;
       });
     });
 
@@ -70,10 +70,9 @@ class _MyHomePageState extends State<MyHomePage> {
     NeatPeriodicTaskScheduler newTimer = NeatPeriodicTaskScheduler(
         task: () async {
           printInfo("Pubbing...");
-
           setState(() {
-            getMessageFromXMPP().then((String message) {
-              this.message = message;
+            getMessageFromXMPP().then((Map<String, dynamic> message) {
+              xmppItems = message;
             });
             timeOfLastRecv = DateTime.now();
           });
@@ -90,8 +89,8 @@ class _MyHomePageState extends State<MyHomePage> {
     return newTimer;
   }
 
-  Future<String> getMessageFromXMPP() async {
-    String value = "";
+  Future<Map<String, dynamic>> getMessageFromXMPP() async {
+    Map<String, dynamic> value = {};
 
     try {
       value = await platform.invokeMethod('getMessage');
@@ -101,6 +100,19 @@ class _MyHomePageState extends State<MyHomePage> {
 
     return value;
   }
+
+  // Build text object.
+  List<Text> buildTextObj() {
+    List<Text> result = [];
+
+    // Add each map item.
+    for(var e in xmppItems.entries) {
+      result.add(Text("${e.key}, ${e.value}"));
+    }
+
+    return result;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,9 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(
               "Time of last recv is ${getDebugDateFormat(timeOfLastRecv)}",
             ),
-            Text(
-              message,
-            ),
+            ...buildTextObj(),
           ],
         ),
       ),

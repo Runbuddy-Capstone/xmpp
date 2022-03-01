@@ -22,6 +22,8 @@ import org.jxmpp.stringprep.XmppStringprepException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -52,10 +54,10 @@ public class MainActivity extends FlutterActivity {
                 @Override
                 public void onMethodCall(MethodCall methodCall, MethodChannel.Result result) {
                     if(methodCall.method.equals("getMessage")) {
-
                         new AsyncPubSubXMPP(ma).execute();
-
-                        result.success("Sneed!");
+                        result.success(new HashMap<String, Object>() {{
+                            put("sneed", "feed");
+                        }});
                     }
                 }
             });
