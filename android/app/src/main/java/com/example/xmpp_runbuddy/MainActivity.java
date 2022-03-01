@@ -10,28 +10,18 @@ import org.jivesoftware.smack.XMPPException;
 import org.jivesoftware.smack.android.AndroidSmackInitializer;
 import org.jivesoftware.smack.packet.ExtensionElement;
 import org.jivesoftware.smack.tcp.XMPPTCPConnection;
-import org.jivesoftware.smackx.pubsub.AccessModel;
-import org.jivesoftware.smackx.pubsub.FormNodeType;
 import org.jivesoftware.smackx.pubsub.Item;
 import org.jivesoftware.smackx.pubsub.LeafNode;
 import org.jivesoftware.smackx.pubsub.PayloadItem;
 import org.jivesoftware.smackx.pubsub.PubSubManager;
-import org.jivesoftware.smackx.pubsub.PublishModel;
 import org.jivesoftware.smackx.pubsub.SimplePayload;
 import org.jivesoftware.smackx.pubsub.Subscription;
-import org.jivesoftware.smackx.pubsub.form.ConfigureForm;
 import org.jivesoftware.smackx.pubsub.form.FillableConfigureForm;
-import org.jivesoftware.smackx.xdata.FormField;
-import org.jivesoftware.smackx.xdata.TextSingleFormField;
-import org.jivesoftware.smackx.xdata.packet.DataForm;
-import org.jxmpp.jid.BareJid;
-import org.jxmpp.jid.Jid;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.stringprep.XmppStringprepException;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -44,6 +34,7 @@ public class MainActivity extends FlutterActivity {
     private PubSubManager psManager = null;
     private AbstractXMPPConnection xmppConnection = null;
     private boolean hasConnection = false;
+    private LeafNode testLeaf = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,9 +90,8 @@ public class MainActivity extends FlutterActivity {
 
                 FillableConfigureForm form = psManager.getDefaultConfiguration().getFillableForm();
                 Log.d("myapp", "waiting for subs...");
-                LeafNode leaf = null;
                 try {
-                    leaf = psManager.getOrCreateLeafNode("testNode");
+                    mainActivity.testLeaf = psManager.getOrCreateLeafNode("testNode");
                 } catch(Exception e) {
                     Log.e("myapp", "error in getting node: " + e.getMessage());
                     return null;
@@ -112,16 +102,19 @@ public class MainActivity extends FlutterActivity {
                 // TODO Update doc about publish
                 // TODO simplepayload constructor is deprecated
                 // TODO spelling error in simple payload
-                leaf.publish(new PayloadItem<ExtensionElement>("test" + System.currentTimeMillis(),
+                mainActivity.testLeaf.publish(new PayloadItem<ExtensionElement>("test" + System.currentTimeMillis(),
                         new SimplePayload(String.format("<data xmlns='https://example.org'>RB Payload%d</data>", System.currentTimeMillis()))));
 
                 Log.d("myapp", "waiting for subs...");
-                leaf.addItemEventListener(new ItemEventCoordinator());
+                mainActivity.testLeaf.addItemEventListener(new ItemEventCoordinator());
                 Log.d("myapp", "waiting for subs...");
-                Subscription subs = leaf.subscribe(JidCreate.from("ryan@ryanmj.xyz/testNode"));
+                Subscription subs = mainActivity.testLeaf.subscribe(JidCreate.from("ryan@ryanmj.xyz/testNode"));
                 Log.d("myapp", "waiting for subs...");
 
-                ArrayList<Item> items = new ArrayList<Item>(leaf.getItems());
+                // Log deletion items.
+                mainActivity.testLeaf.addItemDeleteListener(new ItemDeleteCoordinator(mainActivity.testLeaf.getId()));
+
+                ArrayList<Item> items = new ArrayList<Item>(mainActivity.testLeaf.getItems());
 
                 Log.i("myapp", "The size is " + items.size());
                 for(int i = 0; i < items.size(); i++) {
