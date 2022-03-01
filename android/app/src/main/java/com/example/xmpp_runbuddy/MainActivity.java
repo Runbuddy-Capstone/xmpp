@@ -23,6 +23,7 @@ import org.jxmpp.stringprep.XmppStringprepException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
@@ -61,8 +62,9 @@ public class MainActivity extends FlutterActivity {
                 @Override
                 public void onMethodCall(MethodCall methodCall, MethodChannel.Result result) {
                     if(methodCall.method.equals("getMessage")) {
+                        ArrayList<String> payloads = (ArrayList<String>)methodCall.arguments();
                         try {
-                            result.success(new AsyncPubSubXMPP(ma).execute().get());
+                            result.success(new AsyncPubSubXMPP(ma, payloads).execute().get());
                         } catch (ExecutionException e) {
                             e.printStackTrace();
                         } catch (InterruptedException e) {
@@ -146,9 +148,11 @@ public class MainActivity extends FlutterActivity {
     private class AsyncPubSubXMPP extends AsyncTask<Void, Void, HashMap<String, String>>
     {
         private MainActivity mainActivity = null;
-        public AsyncPubSubXMPP(MainActivity ma) {
+        private ArrayList<String> payloads = null;
+        public AsyncPubSubXMPP(MainActivity ma, ArrayList<String> payloads) {
             super();
             mainActivity = ma;
+            this.payloads = payloads;
         }
 
         @Override
@@ -171,8 +175,11 @@ public class MainActivity extends FlutterActivity {
             ArrayList<Item> items = null;
             try {
                 // Publish to the test node.
-                mainActivity.testLeaf.publish(new PayloadItem<ExtensionElement>("test" + System.currentTimeMillis(),
-                        new SimplePayload(String.format("<data xmlns='https://example.org'>RB Payload%d</data>", System.currentTimeMillis()))));
+                for(String payload : payloads) {
+                    Log.e("myapp", "PUBBINGGajdgkljasdklgjalsdg " + payload);
+                    mainActivity.testLeaf.publish(new PayloadItem<ExtensionElement>("test" + System.currentTimeMillis(),
+                            new SimplePayload(payload)));
+                }
                 // Get the items from the remote node.
                 items = new ArrayList<Item>(mainActivity.testLeaf.getItems());
             } catch (SmackException.NoResponseException e) {
