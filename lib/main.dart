@@ -118,6 +118,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    var xmppList = buildTextObj();
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -129,7 +130,20 @@ class _MyHomePageState extends State<MyHomePage> {
             Text(
               "Time of last recv is ${getDebugDateFormat(timeOfLastRecv)}",
             ),
-            ...buildTextObj(),
+            Expanded(
+              child: SizedBox(
+                height: 200.0,
+                child: ListView.builder(
+                    itemCount: xmppItems.length,
+                    itemBuilder: (context, index) {
+                      var key = xmppItems.keys.elementAt(index);
+                      return Card(child:
+                      Text("$key: ${xmppItems[key]}")
+                      );
+                    }
+                )
+              )
+            )
           ],
         ),
       ),

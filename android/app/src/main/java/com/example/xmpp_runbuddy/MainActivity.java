@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import io.flutter.embedding.android.FlutterActivity;
 import io.flutter.embedding.engine.FlutterEngine;
@@ -46,7 +47,13 @@ public class MainActivity extends FlutterActivity {
         Log.i("myapp", "Setting up XMPP");
 
         // Init XMPP connection.
-        //new AsyncInitXMPP(this).execute();
+        try {
+            hasConnection = new AsyncInitXMPP(this).execute().get();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
         MainActivity ma = this;
         new MethodChannel(getFlutterEngine().getDartExecutor().getBinaryMessenger(), CHANNEL)
@@ -54,18 +61,20 @@ public class MainActivity extends FlutterActivity {
                 @Override
                 public void onMethodCall(MethodCall methodCall, MethodChannel.Result result) {
                     if(methodCall.method.equals("getMessage")) {
-                        //new AsyncPubSubXMPP(ma).execute();
-                        Log.i("myapp", "SNEEDSNEED");
-                        result.success(new HashMap<String, Object>() {{
-                            put("sneed", "feed");
-                        }});
+                        try {
+                            result.success(new AsyncPubSubXMPP(ma).execute().get());
+                        } catch (ExecutionException e) {
+                            e.printStackTrace();
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             });
     }
 
     // Initialize the publish and subscribe connection. MUST be done asynchronously.
-    private class AsyncInitXMPP extends AsyncTask<Void, Void, Void>
+    private class AsyncInitXMPP extends AsyncTask<Void, Void, Boolean>
     {
         private MainActivity mainActivity = null;
         public AsyncInitXMPP(MainActivity ma) {
@@ -80,7 +89,7 @@ public class MainActivity extends FlutterActivity {
         }
 
         @Override
-        protected Void doInBackground(Void... voids) {
+        protected Boolean doInBackground(Void... voids) {
             AndroidSmackInitializer.initialize(getApplicationContext());
 
             try {
@@ -97,32 +106,17 @@ public class MainActivity extends FlutterActivity {
                     mainActivity.testLeaf = psManager.getOrCreateLeafNode("testNode");
                 } catch(Exception e) {
                     Log.e("myapp", "error in getting node: " + e.getMessage());
-                    return null;
+                    return new Boolean(false);
                 }
 
-                Log.d("myapp", "waiting for subs...");
-
-                // TODO Update doc about publish
-                // TODO simplepayload constructor is deprecated
-                // TODO spelling error in simple payload
-                mainActivity.testLeaf.publish(new PayloadItem<ExtensionElement>("test" + System.currentTimeMillis(),
-                        new SimplePayload(String.format("<data xmlns='https://example.org'>RB Payload%d</data>", System.currentTimeMillis()))));
-
-                Log.d("myapp", "waiting for subs...");
+                Log.i("myapp", "Adding event listeners");
                 mainActivity.testLeaf.addItemEventListener(new ItemEventCoordinator());
-                Log.d("myapp", "waiting for subs...");
                 Subscription subs = mainActivity.testLeaf.subscribe(JidCreate.from("ryan@ryanmj.xyz/testNode"));
-                Log.d("myapp", "waiting for subs...");
 
-                // Log deletion items.
                 mainActivity.testLeaf.addItemDeleteListener(new ItemDeleteCoordinator(mainActivity.testLeaf.getId()));
 
-                ArrayList<Item> items = new ArrayList<Item>(mainActivity.testLeaf.getItems());
-
-                Log.i("myapp", "The size is " + items.size());
-                for(int i = 0; i < items.size(); i++) {
-                    Log.i("myapp", items.toString());
-                }
+                Log.i("myapp", "Deleting other test pubs");
+                mainActivity.testLeaf.deleteAllItems();
 
                 mainActivity.hasConnection = true;
             } catch (XmppStringprepException e) {
@@ -144,12 +138,12 @@ public class MainActivity extends FlutterActivity {
             } else {
                 Log.e("myapp", "We have failed to establish a connection.");
             }
-            return null;
+            return new Boolean(true);
         }
     }
 
     // Do periodic publish and subscribe to/from the server.
-    private class AsyncPubSubXMPP extends AsyncTask<Void, Void, Void>
+    private class AsyncPubSubXMPP extends AsyncTask<Void, Void, HashMap<String, String>>
     {
         private MainActivity mainActivity = null;
         public AsyncPubSubXMPP(MainActivity ma) {
@@ -164,12 +158,43 @@ public class MainActivity extends FlutterActivity {
         }
 
         @Override
-        protected Void doInBackground(Void... voids) {
+        protected HashMap<String, String> doInBackground(Void... voids) {
             // Do nothing if no connection.
             if(!mainActivity.hasConnection) {
-                return null;
+                return new HashMap<String, String>() {{
+                    put("ERROR", "No connection");
+                }};
             }
-            return null;
+            // TODO Update doc about publish
+            // TODO simplepayload constructor is deprecated
+            // TODO spelling error in simple payload
+            ArrayList<Item> items = null;
+            try {
+                // Publish to the test node.
+                mainActivity.testLeaf.publish(new PayloadItem<ExtensionElement>("test" + System.currentTimeMillis(),
+                        new SimplePayload(String.format("<data xmlns='https://example.org'>RB Payload%d</data>", System.currentTimeMillis()))));
+                // Get the items from the remote node.
+                items = new ArrayList<Item>(mainActivity.testLeaf.getItems());
+            } catch (SmackException.NoResponseException e) {
+                e.printStackTrace();
+            } catch (XMPPException.XMPPErrorException e) {
+                e.printStackTrace();
+            } catch (SmackException.NotConnectedException e) {
+                e.printStackTrace();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            Log.i("myapp", "The size is " + items.size());
+            for(int i = 0; i < items.size(); i++) {
+                Log.i("myapp", items.toString());
+            }
+
+            HashMap<String, String> resultingMap = new HashMap<String, String>();
+            for(Item i : items) {
+                resultingMap.put(i.getId(), i.toXML().toString());
+            }
+            return resultingMap;
         }
     }
 }
